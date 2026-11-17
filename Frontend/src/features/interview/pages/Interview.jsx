@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
+import { evaluateAnswer } from '../services/interview.api.js'
 import { useNavigate, useParams } from 'react-router'
 
 
@@ -12,8 +13,67 @@ const NAV_ITEMS = [
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-const QuestionCard = ({ item, index }) => {
+const QuestionCard = ({ item, index, questionType = "technical", jobDescription = "" }) => {
     const [ open, setOpen ] = useState(false)
+    const [ activeTab, setActiveTab ] = useState('guide') // 'guide' | 'practice'
+    const [ userAnswer, setUserAnswer ] = useState("")
+    const [ evaluating, setEvaluating ] = useState(false)
+    const [ evaluation, setEvaluation ] = useState(null)
+    const [ error, setError ] = useState("")
+
+    // Stopwatch timer for mock interview practice
+    const [ timerSeconds, setTimerSeconds ] = useState(0)
+    const [ timerRunning, setTimerRunning ] = useState(false)
+
+    useEffect(() => {
+        let interval = null
+        if (timerRunning) {
+            interval = setInterval(() => {
+                setTimerSeconds(s => s + 1)
+            }, 1000)
+        } else {
+            clearInterval(interval)
+        }
+        return () => clearInterval(interval)
+    }, [ timerRunning ])
+
+    const formatTime = (secs) => {
+        const m = Math.floor(secs / 60)
+        const s = secs % 60
+        return `${m}:${s < 10 ? '0' : ''}${s}`
+    }
+
+    const handleEvaluate = async () => {
+        if (!userAnswer.trim()) {
+            setError("Please write your answer before asking the AI coach to evaluate.")
+            return
+        }
+        setError("")
+        setEvaluating(true)
+        setTimerRunning(false)
+        try {
+            const data = await evaluateAnswer({
+                question: item.question,
+                userAnswer,
+                questionType,
+                jobDescription
+            })
+            setEvaluation(data.evaluation)
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || "Failed to evaluate answer")
+        } finally {
+            setEvaluating(false)
+        }
+    }
+
+    const handleResetPractice = () => {
+        setUserAnswer("")
+        setEvaluation(null)
+        setTimerSeconds(0)
+        setTimerRunning(false)
+        setError("")
+    }
+
     return (
         <div className='q-card'>
             <div className='q-card__header' onClick={() => setOpen(o => !o)}>
@@ -23,16 +83,195 @@ const QuestionCard = ({ item, index }) => {
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                 </span>
             </div>
+
             {open && (
                 <div className='q-card__body'>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--intention'>Intention</span>
-                        <p>{item.intention}</p>
+                    {/* Navigation Tabs between Guide and Practice Mode */}
+                    <div className='q-card__tabs'>
+                        <button
+                            type="button"
+                            className={`q-card__tab-btn ${activeTab === 'guide' ? 'q-card__tab-btn--active' : ''}`}
+                            onClick={() => setActiveTab('guide')}
+                        >
+                            💡 Model Answer & Guidance
+                        </button>
+                        <button
+                            type="button"
+                            className={`q-card__tab-btn ${activeTab === 'practice' ? 'q-card__tab-btn--active' : ''}`}
+                            onClick={() => setActiveTab('practice')}
+                        >
+                            🎯 Practice with AI Coach {evaluation && `(Score: ${evaluation.score}%)`}
+                        </button>
                     </div>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
-                        <p>{item.answer}</p>
-                    </div>
+
+                    {activeTab === 'guide' ? (
+                        <>
+                            <div className='q-card__section'>
+                                <span className='q-card__tag q-card__tag--intention'>Interviewer Intent</span>
+                                <p>{item.intention}</p>
+                            </div>
+                            <div className='q-card__section'>
+                                <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
+                                <p>{item.answer}</p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className='practice-box'>
+                            <div className='practice-box__header'>
+                                <span>Draft your response (aim for ~150-250 words or 2 minutes):</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <div className='practice-box__timer'>
+                                        ⏱️ {formatTime(timerSeconds)}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTimerRunning(r => !r)}
+                                        style={{
+                                            background: timerRunning ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+                                            color: timerRunning ? '#f87171' : '#38bdf8',
+                                            border: 'none',
+                                            padding: '0.2rem 0.5rem',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        {timerRunning ? 'Pause' : 'Start Timer'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <textarea
+                                className='practice-box__textarea'
+                                placeholder="Structure your answer using STAR: Situation (context), Task (goal/problem), Action (your specific actions), and Result (quantifiable impact)..."
+                                value={userAnswer}
+                                onChange={(e) => setUserAnswer(e.target.value)}
+                                disabled={evaluating}
+                            />
+
+                            {error && <p style={{ color: '#f87171', margin: 0, fontSize: '0.82rem' }}>⚠️ {error}</p>}
+
+                            <div className='practice-box__actions'>
+                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                    {userAnswer.trim().split(/\s+/).filter(Boolean).length} words
+                                </span>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {(userAnswer || evaluation) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleResetPractice}
+                                            style={{
+                                                background: 'transparent',
+                                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                                color: '#94a3b8',
+                                                padding: '0.4rem 0.8rem',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.82rem'
+                                            }}
+                                        >
+                                            Reset
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={handleEvaluate}
+                                        disabled={evaluating}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            padding: '0.45rem 1rem',
+                                            borderRadius: '6px',
+                                            fontWeight: '600',
+                                            fontSize: '0.85rem',
+                                            cursor: evaluating ? 'not-allowed' : 'pointer',
+                                            opacity: evaluating ? 0.7 : 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.4rem'
+                                        }}
+                                    >
+                                        {evaluating ? 'Evaluating with AI...' : 'Evaluate Answer with AI ✨'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Evaluation Result Card */}
+                            {evaluation && (
+                                <div className='evaluation-card'>
+                                    <div className='evaluation-card__header'>
+                                        <div>
+                                            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>AI Coach Evaluation</span>
+                                            <h3 style={{ margin: '0.2rem 0 0', fontSize: '1.1rem', color: '#f8fafc' }}>Performance Score</h3>
+                                        </div>
+                                        <div className={`evaluation-card__score-badge ${
+                                            evaluation.score >= 80 ? 'evaluation-card__score-badge--high' :
+                                            evaluation.score >= 60 ? 'evaluation-card__score-badge--mid' :
+                                            'evaluation-card__score-badge--low'
+                                        }`}>
+                                            <span>{evaluation.score}</span>
+                                            <span style={{ fontSize: '0.8rem' }}>/ 100</span>
+                                        </div>
+                                    </div>
+
+                                    {/* STAR Checklist */}
+                                    <div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>STAR Framework Breakdown:</span>
+                                        <div className='evaluation-card__star-grid'>
+                                            <div className={`evaluation-card__star-item ${evaluation.starChecklist?.situation ? 'evaluation-card__star-item--yes' : 'evaluation-card__star-item--no'}`}>
+                                                {evaluation.starChecklist?.situation ? '✅' : '❌'} Situation
+                                            </div>
+                                            <div className={`evaluation-card__star-item ${evaluation.starChecklist?.task ? 'evaluation-card__star-item--yes' : 'evaluation-card__star-item--no'}`}>
+                                                {evaluation.starChecklist?.task ? '✅' : '❌'} Task
+                                            </div>
+                                            <div className={`evaluation-card__star-item ${evaluation.starChecklist?.action ? 'evaluation-card__star-item--yes' : 'evaluation-card__star-item--no'}`}>
+                                                {evaluation.starChecklist?.action ? '✅' : '❌'} Action
+                                            </div>
+                                            <div className={`evaluation-card__star-item ${evaluation.starChecklist?.result ? 'evaluation-card__star-item--yes' : 'evaluation-card__star-item--no'}`}>
+                                                {evaluation.starChecklist?.result ? '✅' : '❌'} Result
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className='evaluation-card__feedback'>
+                                        <strong style={{ color: '#f1f5f9' }}>Coach Feedback: </strong>
+                                        {evaluation.feedback}
+                                    </div>
+
+                                    {evaluation.strengths?.length > 0 && (
+                                        <div>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4ade80' }}>Key Strengths:</span>
+                                            <ul className='evaluation-card__list evaluation-card__list--strengths'>
+                                                {evaluation.strengths.map((str, idx) => (
+                                                    <li key={idx}>{str}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {evaluation.improvements?.length > 0 && (
+                                        <div>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fb923c' }}>Areas to Improve:</span>
+                                            <ul className='evaluation-card__list evaluation-card__list--improvements'>
+                                                {evaluation.improvements.map((imp, idx) => (
+                                                    <li key={idx}>{imp}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {evaluation.improvedAnswer && (
+                                        <div className='evaluation-card__improved'>
+                                            <h4>✨ Recommended Polished Version</h4>
+                                            <p>{evaluation.improvedAnswer}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -61,6 +300,7 @@ const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
+    const navigate = useNavigate()
 
     useEffect(() => {
         if (interviewId) {
@@ -89,6 +329,24 @@ const Interview = () => {
 
                 {/* ── Left Nav ── */}
                 <nav className='interview-nav'>
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            padding: '0.4rem 0.5rem',
+                            marginBottom: '0.8rem',
+                            borderRadius: '6px'
+                        }}
+                    >
+                        ← Back to Dashboard
+                    </button>
                     <div className="nav-content">
                         <p className='interview-nav__label'>Sections</p>
                         {NAV_ITEMS.map(item => (
@@ -122,7 +380,13 @@ const Interview = () => {
                             </div>
                             <div className='q-list'>
                                 {report.technicalQuestions.map((q, i) => (
-                                    <QuestionCard key={i} item={q} index={i} />
+                                    <QuestionCard
+                                        key={i}
+                                        item={q}
+                                        index={i}
+                                        questionType="technical"
+                                        jobDescription={report.jobDescription}
+                                    />
                                 ))}
                             </div>
                         </section>
@@ -136,7 +400,13 @@ const Interview = () => {
                             </div>
                             <div className='q-list'>
                                 {report.behavioralQuestions.map((q, i) => (
-                                    <QuestionCard key={i} item={q} index={i} />
+                                    <QuestionCard
+                                        key={i}
+                                        item={q}
+                                        index={i}
+                                        questionType="behavioral"
+                                        jobDescription={report.jobDescription}
+                                    />
                                 ))}
                             </div>
                         </section>

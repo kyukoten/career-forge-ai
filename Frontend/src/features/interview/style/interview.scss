@@ -226,6 +226,214 @@
       border: 1px solid rgba(52, 211, 153, 0.2);
     }
   }
+
+  &__tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 0.5rem;
+  }
+
+  &__tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      color: #fff;
+    }
+
+    &--active {
+      color: #fff;
+      background: rgba(139, 92, 246, 0.25);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+  }
+
+  .practice-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1rem;
+
+    &__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    &__timer {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    &__textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35);
+      color: #f1f5f9;
+      font-size: 0.9rem;
+      resize: vertical;
+      font-family: inherit;
+      box-sizing: border-box;
+
+      &:focus {
+        outline: none;
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+      }
+    }
+
+    &__actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+  }
+
+  .evaluation-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-top: 0.6rem;
+
+    &__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.6rem;
+    }
+
+    &__score-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 8px;
+
+      &--high {
+        color: #4ade80;
+        background: rgba(74, 222, 128, 0.15);
+        border: 1px solid rgba(74, 222, 128, 0.3);
+      }
+      &--mid {
+        color: #facc15;
+        background: rgba(250, 204, 21, 0.15);
+        border: 1px solid rgba(250, 204, 21, 0.3);
+      }
+      &--low {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.15);
+        border: 1px solid rgba(248, 113, 113, 0.3);
+      }
+    }
+
+    &__star-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin: 0.2rem 0;
+    }
+
+    &__star-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.4rem;
+      border-radius: 6px;
+
+      &--yes {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      &--no {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+    }
+
+    &__feedback {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+
+    &__list {
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+
+      &--strengths li {
+        color: #86efac;
+      }
+      &--improvements li {
+        color: #fdba74;
+      }
+    }
+
+    &__improved {
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 6px;
+      padding: 0.8rem;
+
+      h4 {
+        margin: 0 0 0.4rem 0;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #c4b5fd;
+        letter-spacing: 0.05em;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.88rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+    }
+  }
 }
 
 .roadmap-list {

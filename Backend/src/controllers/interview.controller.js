@@ -1,5 +1,5 @@
 const pdfParse = require("pdf-parse")
-const { generateInterviewReport, generateResumePdf } = require("../services/ai.service")
+const { generateInterviewReport, generateResumePdf, evaluateCandidateAnswer } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
 
 
@@ -95,4 +95,42 @@ async function generateResumePdfController(req, res) {
     res.send(pdfBuffer)
 }
 
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController }
+/**
+ * @description Controller to evaluate a candidate's practiced answer using STAR criteria.
+ */
+async function evaluateAnswerController(req, res) {
+    try {
+        const { question, userAnswer, questionType, jobDescription } = req.body
+
+        if (!question || !userAnswer) {
+            return res.status(400).json({
+                message: "Both question and your answer are required for evaluation."
+            })
+        }
+
+        const evaluation = await evaluateCandidateAnswer({
+            question,
+            userAnswer,
+            questionType,
+            jobDescription
+        })
+
+        res.status(200).json({
+            message: "Answer evaluated successfully.",
+            evaluation
+        })
+    } catch (err) {
+        console.error("Evaluation error:", err)
+        res.status(500).json({
+            message: err.message || "Failed to evaluate answer. Please try again."
+        })
+    }
+}
+
+module.exports = {
+    generateInterViewReportController,
+    getInterviewReportByIdController,
+    getAllInterviewReportsController,
+    generateResumePdfController,
+    evaluateAnswerController
+}

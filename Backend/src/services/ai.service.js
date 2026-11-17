@@ -7,6 +7,36 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY
 })
 
+const DEFAULT_MODELS = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-3-flash-preview"
+].filter(Boolean)
+
+async function generateStructuredContent({ prompt, schema }) {
+    let lastError = null
+    for (const model of DEFAULT_MODELS) {
+        try {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: zodToJsonSchema(schema),
+                }
+            })
+            if (response && response.text) {
+                return JSON.parse(response.text)
+            }
+        } catch (err) {
+            lastError = err
+            console.warn(`[AI Service] Model ${model} failed, trying next model:`, err.message || err)
+        }
+    }
+    throw new Error(lastError ? `AI Generation Error: ${lastError.message}` : "Unable to generate content with available models")
+}
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
@@ -32,30 +62,48 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+const answerEvaluationSchema = z.object({
+    score: z.number().min(0).max(100).describe("Overall score from 0 to 100 on answer quality, clarity, and relevance"),
+    feedback: z.string().describe("Constructive 2-3 sentence overview of the answer's strengths and weaknesses"),
+    starChecklist: z.object({
+        situation: z.boolean().describe("Did the candidate clearly set the situation or background context?"),
+        task: z.boolean().describe("Did the candidate explain the exact task, problem, or objective?"),
+        action: z.boolean().describe("Did the candidate describe specific personal actions, tools, and decisions?"),
+        result: z.boolean().describe("Did the candidate share the measurable impact, outcome, or lesson learned?")
+    }).describe("STAR framework compliance check"),
+    strengths: z.array(z.string()).describe("2-3 specific things the candidate did very well"),
+    improvements: z.array(z.string()).describe("2-3 specific suggestions to make this answer significantly stronger"),
+    improvedAnswer: z.string().describe("An exemplary, polished model answer following STAR and industry best practices")
+})
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
-
-
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
 `
-
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
-
-    return JSON.parse(response.text)
-
-
+    return await generateStructuredContent({ prompt, schema: interviewReportSchema })
 }
 
+async function evaluateCandidateAnswer({ question, userAnswer, questionType = "technical", jobDescription = "" }) {
+    const prompt = `You are an elite Tech Interview Coach evaluating a candidate's practice response.
+Target Job Context: ${jobDescription || "Software Engineer / Professional Tech Role"}
+Question Type: ${questionType}
+Interview Question: "${question}"
 
+Candidate's Practiced Answer:
+"""
+${userAnswer}
+"""
+
+Evaluate this response objectively:
+1. Score from 0 to 100 based on depth, accuracy, clarity, and impact.
+2. Evaluate adherence to the STAR framework (Situation, Task, Action, Result).
+3. Identify top strengths and critical missed points/weaknesses.
+4. Provide a refined, world-class version of the answer that the candidate can study and learn from.`
+
+    return await generateStructuredContent({ prompt, schema: answerEvaluationSchema })
+}
 
 async function generatePdfFromHtml(htmlContent) {
     const browser = await puppeteer.launch()
@@ -72,12 +120,10 @@ async function generatePdfFromHtml(htmlContent) {
     })
 
     await browser.close()
-
     return pdfBuffer
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
-
     const resumePdfSchema = z.object({
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
     })
@@ -95,22 +141,9 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
-        }
-    })
-
-
-    const jsonContent = JSON.parse(response.text)
-
+    const jsonContent = await generateStructuredContent({ prompt, schema: resumePdfSchema })
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
-
     return pdfBuffer
-
 }
 
-module.exports = { generateInterviewReport, generateResumePdf }
+module.exports = { generateInterviewReport, generateResumePdf, evaluateCandidateAnswer }

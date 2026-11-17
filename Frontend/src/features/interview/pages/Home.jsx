@@ -1,16 +1,23 @@
 import React, { useState, useRef } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
+import { useAuth } from '../../auth/hooks/useAuth.js'
 import { useNavigate } from 'react-router'
 
 const Home = () => {
 
-    const { loading, generateReport,reports } = useInterview()
+    const { loading, generateReport, reports } = useInterview()
+    const { user, handleLogout } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
+
+    const onLogout = async () => {
+        await handleLogout()
+        navigate('/login')
+    }
 
     const handleGenerateReport = async () => {
         const resumeFile = resumeInputRef.current.files[ 0 ]
@@ -28,6 +35,49 @@ const Home = () => {
 
     return (
         <div className='home-page'>
+
+            {/* Top Navigation Bar */}
+            <nav style={{
+                width: '100%',
+                maxWidth: '900px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.8rem 1.2rem',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '1rem'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    <span>🚀</span>
+                    <span>CareerForge AI</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {user && (
+                        <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                            👤 <strong>{user.username}</strong> ({user.email})
+                        </span>
+                    )}
+                    <button
+                        onClick={onLogout}
+                        style={{
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            color: '#f87171',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            padding: '0.4rem 0.9rem',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.85rem',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Log Out
+                    </button>
+                </div>
+            </nav>
 
             {/* Page Header */}
             <header className='page-header'>
