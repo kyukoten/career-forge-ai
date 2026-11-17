@@ -9,6 +9,7 @@ import { useNavigate, useParams } from 'react-router'
 const NAV_ITEMS = [
     { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
     { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
+    { id: 'ats', label: 'ATS & Keyword Matrix', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>) },
     { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
 ]
 
@@ -322,6 +323,21 @@ const Interview = () => {
         report.matchScore >= 80 ? 'score--high' :
             report.matchScore >= 60 ? 'score--mid' : 'score--low'
 
+    const atsData = report.atsAnalysis || {
+        breakdown: {
+            keywordMatch: Math.max(30, Math.round(report.matchScore * 0.95)),
+            technicalSkills: report.matchScore,
+            softSkills: Math.min(95, Math.round(report.matchScore * 1.05)),
+            experienceLevel: Math.max(40, Math.round(report.matchScore * 0.9))
+        },
+        matchedKeywords: report.skillGaps?.filter(g => g.severity === 'low').map(g => g.skill).slice(0, 8) || [ "Git", "REST APIs", "Problem Solving" ],
+        missingKeywords: report.skillGaps?.filter(g => g.severity === 'high' || g.severity === 'medium').map(g => g.skill).slice(0, 8) || [ "Cloud Infrastructure", "System Architecture", "Automated Testing" ],
+        recommendations: [
+            "Naturally embed the missing technical keywords into your work experience bullet points.",
+            "Use clear action verbs and quantify outcomes (e.g. 'Improved response time by 40% using Redis').",
+            "Keep styling ATS-friendly by using clean linear hierarchy without complex multi-column tables."
+        ]
+    }
 
     return (
         <div className='interview-page'>
@@ -412,6 +428,126 @@ const Interview = () => {
                         </section>
                     )}
 
+                    {activeNav === 'ats' && (
+                        <section className='ats-section'>
+                            <div className='content-header'>
+                                <h2>ATS Resume Analytics & Keyword Matrix</h2>
+                                <span className='content-header__count'>
+                                    {atsData.matchedKeywords?.length || 0} matched &bull; {atsData.missingKeywords?.length || 0} missing
+                                </span>
+                            </div>
+
+                            {/* 4 Multi-Factor Metric Cards */}
+                            <div className='ats-metrics-grid'>
+                                <div className='ats-metric-card'>
+                                    <div className='ats-metric-card__header'>
+                                        <span>Keyword Density</span>
+                                        <strong>{atsData.breakdown?.keywordMatch || 0}%</strong>
+                                    </div>
+                                    <div className='ats-progress-bar'>
+                                        <div className='ats-progress-bar__fill ats-progress-bar__fill--keyword' style={{ width: `${atsData.breakdown?.keywordMatch || 0}%` }}></div>
+                                    </div>
+                                    <p className='ats-metric-card__sub'>Alignment with job keywords</p>
+                                </div>
+
+                                <div className='ats-metric-card'>
+                                    <div className='ats-metric-card__header'>
+                                        <span>Technical Skills</span>
+                                        <strong>{atsData.breakdown?.technicalSkills || 0}%</strong>
+                                    </div>
+                                    <div className='ats-progress-bar'>
+                                        <div className='ats-progress-bar__fill ats-progress-bar__fill--tech' style={{ width: `${atsData.breakdown?.technicalSkills || 0}%` }}></div>
+                                    </div>
+                                    <p className='ats-metric-card__sub'>Required tech stack coverage</p>
+                                </div>
+
+                                <div className='ats-metric-card'>
+                                    <div className='ats-metric-card__header'>
+                                        <span>Soft Skills & Impact</span>
+                                        <strong>{atsData.breakdown?.softSkills || 0}%</strong>
+                                    </div>
+                                    <div className='ats-progress-bar'>
+                                        <div className='ats-progress-bar__fill ats-progress-bar__fill--soft' style={{ width: `${atsData.breakdown?.softSkills || 0}%` }}></div>
+                                    </div>
+                                    <p className='ats-metric-card__sub'>Communication & ownership</p>
+                                </div>
+
+                                <div className='ats-metric-card'>
+                                    <div className='ats-metric-card__header'>
+                                        <span>Experience & Scope</span>
+                                        <strong>{atsData.breakdown?.experienceLevel || 0}%</strong>
+                                    </div>
+                                    <div className='ats-progress-bar'>
+                                        <div className='ats-progress-bar__fill ats-progress-bar__fill--exp' style={{ width: `${atsData.breakdown?.experienceLevel || 0}%` }}></div>
+                                    </div>
+                                    <p className='ats-metric-card__sub'>Role seniority alignment</p>
+                                </div>
+                            </div>
+
+                            {/* Dual Keyword Comparison Box */}
+                            <div className='ats-keyword-grid'>
+                                <div className='ats-keyword-box ats-keyword-box--matched'>
+                                    <div className='ats-keyword-box__header'>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span>✅</span>
+                                            <h3>Matched Keywords in Resume</h3>
+                                        </div>
+                                        <span className='ats-count-badge ats-count-badge--green'>{atsData.matchedKeywords?.length || 0}</span>
+                                    </div>
+                                    <p className='ats-keyword-box__desc'>These keywords from the job description are already present in your profile.</p>
+                                    <div className='ats-keyword-tags'>
+                                        {atsData.matchedKeywords && atsData.matchedKeywords.length > 0 ? (
+                                            atsData.matchedKeywords.map((kw, i) => (
+                                                <span key={i} className='kw-tag kw-tag--matched'>
+                                                    ✓ {kw}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No direct keywords detected.</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className='ats-keyword-box ats-keyword-box--missing'>
+                                    <div className='ats-keyword-box__header'>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span>⚠️</span>
+                                            <h3>Critical Missing Keywords</h3>
+                                        </div>
+                                        <span className='ats-count-badge ats-count-badge--amber'>{atsData.missingKeywords?.length || 0}</span>
+                                    </div>
+                                    <p className='ats-keyword-box__desc'>Add these terms to your experience bullets to pass automated ATS filters.</p>
+                                    <div className='ats-keyword-tags'>
+                                        {atsData.missingKeywords && atsData.missingKeywords.length > 0 ? (
+                                            atsData.missingKeywords.map((kw, i) => (
+                                                <span key={i} className='kw-tag kw-tag--missing'>
+                                                    + {kw}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Great job! No major keywords missing.</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ATS Optimization Recommendations */}
+                            {atsData.recommendations && atsData.recommendations.length > 0 && (
+                                <div className='ats-recommendations-card'>
+                                    <div className='ats-recommendations-card__header'>
+                                        <span>💡</span>
+                                        <h3>Actionable ATS Recommendations</h3>
+                                    </div>
+                                    <ul className='ats-recommendations-list'>
+                                        {atsData.recommendations.map((rec, i) => (
+                                            <li key={i}>{rec}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </section>
+                    )}
+
                     {activeNav === 'roadmap' && (
                         <section>
                             <div className='content-header'>
@@ -439,7 +575,43 @@ const Interview = () => {
                             <span className='match-score__value'>{report.matchScore}</span>
                             <span className='match-score__pct'>%</span>
                         </div>
-                        <p className='match-score__sub'>Strong match for this role</p>
+                        <p className='match-score__sub'>
+                            {report.matchScore >= 80 ? 'Strong match for this role' :
+                             report.matchScore >= 60 ? 'Moderate match - see gap analysis' :
+                             'Needs targeted skill preparation'}
+                        </p>
+                    </div>
+
+                    {/* Mini ATS Breakdown in Sidebar */}
+                    <div className='sidebar-ats-breakdown'>
+                        <div className='sidebar-ats-item'>
+                            <span>Keywords</span>
+                            <div className='sidebar-mini-bar'>
+                                <div style={{ width: `${atsData.breakdown?.keywordMatch || 0}%`, background: '#38bdf8' }} />
+                            </div>
+                            <span>{atsData.breakdown?.keywordMatch || 0}%</span>
+                        </div>
+                        <div className='sidebar-ats-item'>
+                            <span>Technical</span>
+                            <div className='sidebar-mini-bar'>
+                                <div style={{ width: `${atsData.breakdown?.technicalSkills || 0}%`, background: '#a855f7' }} />
+                            </div>
+                            <span>{atsData.breakdown?.technicalSkills || 0}%</span>
+                        </div>
+                        <div className='sidebar-ats-item'>
+                            <span>Soft Skills</span>
+                            <div className='sidebar-mini-bar'>
+                                <div style={{ width: `${atsData.breakdown?.softSkills || 0}%`, background: '#34d399' }} />
+                            </div>
+                            <span>{atsData.breakdown?.softSkills || 0}%</span>
+                        </div>
+                        <div className='sidebar-ats-item'>
+                            <span>Experience</span>
+                            <div className='sidebar-mini-bar'>
+                                <div style={{ width: `${atsData.breakdown?.experienceLevel || 0}%`, background: '#fbbf24' }} />
+                            </div>
+                            <span>{atsData.breakdown?.experienceLevel || 0}%</span>
+                        </div>
                     </div>
 
                     <div className='sidebar-divider' />

@@ -21,7 +21,7 @@ const technicalQuestionSchema = new mongoose.Schema({
 const behavioralQuestionSchema = new mongoose.Schema({
     question: {
         type: String,
-        required: [ true, "Technical question is required" ]
+        required: [ true, "Behavioral question is required" ]
     },
     intention: {
         type: String,
@@ -64,6 +64,20 @@ const preparationPlanSchema = new mongoose.Schema({
     } ]
 })
 
+const atsAnalysisSchema = new mongoose.Schema({
+    breakdown: {
+        keywordMatch: { type: Number, default: 0 },
+        technicalSkills: { type: Number, default: 0 },
+        softSkills: { type: Number, default: 0 },
+        experienceLevel: { type: Number, default: 0 }
+    },
+    matchedKeywords: [ { type: String } ],
+    missingKeywords: [ { type: String } ],
+    recommendations: [ { type: String } ]
+}, {
+    _id: false
+})
+
 const interviewReportSchema = new mongoose.Schema({
     jobDescription: {
         type: String,
@@ -80,6 +94,7 @@ const interviewReportSchema = new mongoose.Schema({
         min: 0,
         max: 100,
     },
+    atsAnalysis: atsAnalysisSchema,
     technicalQuestions: [ technicalQuestionSchema ],
     behavioralQuestions: [ behavioralQuestionSchema ],
     skillGaps: [ skillGapSchema ],

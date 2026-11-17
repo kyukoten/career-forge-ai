@@ -40,6 +40,17 @@ async function generateStructuredContent({ prompt, schema }) {
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
+    atsAnalysis: z.object({
+        breakdown: z.object({
+            keywordMatch: z.number().min(0).max(100).describe("Score for ATS keyword density and alignment (0-100)"),
+            technicalSkills: z.number().min(0).max(100).describe("Score for hard technical skills match (0-100)"),
+            softSkills: z.number().min(0).max(100).describe("Score for soft skills, communication and collaboration match (0-100)"),
+            experienceLevel: z.number().min(0).max(100).describe("Score for seniority and experience alignment (0-100)")
+        }).describe("Detailed percentage breakdown of the ATS evaluation"),
+        matchedKeywords: z.array(z.string()).describe("List of critical keywords from the job description found on the candidate's profile"),
+        missingKeywords: z.array(z.string()).describe("List of high-priority keywords from the job description that are missing on the profile"),
+        recommendations: z.array(z.string()).describe("Actionable tips to improve the resume's ATS pass rate and keyword optimization")
+    }).describe("In-depth ATS resume optimization and keyword comparison matrix"),
     technicalQuestions: z.array(z.object({
         question: z.string().describe("The technical question can be asked in the interview"),
         intention: z.string().describe("The intention of interviewer behind asking this question"),
@@ -77,11 +88,23 @@ const answerEvaluationSchema = z.object({
 })
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
-`
+    const prompt = `Generate a comprehensive interview preparation report and deep ATS resume analysis for a candidate with the following details:
+Resume Content: ${resume || "Not provided directly"}
+Self Description: ${selfDescription || "Not provided"}
+Target Job Description: ${jobDescription}
+
+Perform a rigorous multi-factor evaluation:
+1. Overall match score (0-100) and granular ATS percentage breakdown across:
+   - keywordMatch: How closely candidate keywords match the job requirements.
+   - technicalSkills: Alignment with required tech stack, languages, tools, frameworks.
+   - softSkills: Communication, problem solving, teamwork, leadership.
+   - experienceLevel: Alignment with required seniority, years, and scope.
+2. Extract high-impact "matchedKeywords" present in candidate profile, and "missingKeywords" that are critical in the job description but absent from the profile.
+3. Provide 2-3 actionable "recommendations" to optimize ATS passing rate.
+4. Generate relevant technical and behavioral interview questions with interviewer intent and model answers.
+5. Identify skill gaps with severity levels (low, medium, high).
+6. Create an actionable day-by-day preparation roadmap.`
+
     return await generateStructuredContent({ prompt, schema: interviewReportSchema })
 }
 
