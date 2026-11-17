@@ -49,14 +49,21 @@ const Home = () => {
             return
         }
 
-        const data = await generateReport({
-            jobDescription,
-            selfDescription,
-            resumeFile: selectedFile
-        })
+        try {
+            const data = await generateReport({
+                jobDescription,
+                selfDescription,
+                resumeFile: selectedFile
+            })
 
-        if (data?._id) {
-            navigate(`/interview/${data._id}`)
+            if (data?._id) {
+                navigate(`/interview/${data._id}`)
+            } else {
+                setValidationError("Could not generate interview plan. Please verify backend connection and try again.")
+            }
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || err.message || "An unexpected error occurred while generating your plan."
+            setValidationError(errorMsg)
         }
     }
 
